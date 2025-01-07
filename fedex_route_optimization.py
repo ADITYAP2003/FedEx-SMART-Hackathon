@@ -2,64 +2,50 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 
-# Constants for API keys (replace with actual API keys)
 TOMTOM_API_KEY = 'your_tomtom_api_key'
 GOOGLE_MAPS_API_KEY = 'your_google_maps_api_key'
 AQICN_API_KEY = 'your_aqicn_api_key'
 
-# Function to get real-time traffic data from TomTom
 def get_traffic_data(start_lat, start_lon, end_lat, end_lon):
     url = f"https://api.tomtom.com/routing/1/calculateRoute/{start_lat},{start_lon}:{end_lat},{end_lon}/json?key={TOMTOM_API_KEY}"
     response = requests.get(url)
     data = response.json()
     return data['routes'][0]['summary']['trafficTimeInSeconds']
 
-# Function to get the route details from Google Maps
 def get_route_data(start_lat, start_lon, end_lat, end_lon):
     url = f"https://maps.googleapis.com/maps/api/directions/json?origin={start_lat},{start_lon}&destination={end_lat},{end_lon}&key={GOOGLE_MAPS_API_KEY}"
     response = requests.get(url)
     data = response.json()
     return data['routes'][0]['legs'][0]['duration']['value'], data['routes'][0]['legs'][0]['distance']['value']
 
-# Function to get air quality data from AQICN
 def get_air_quality_data(city):
     url = f"http://api.waqi.info/feed/{city}/?token={AQICN_API_KEY}"
     response = requests.get(url)
     data = response.json()
     return data['data']['aqi']
 
-# Function to estimate emissions based on vehicle type, distance, and air quality
 def estimate_emissions(vehicle_type, distance, air_quality):
-    # Simple emission estimation (CO2 emissions in grams)
     emission_factor = 0.12 if vehicle_type == "gasoline" else 0.08  # in grams per km
     emissions = emission_factor * distance
-    # Factor in air quality (bad air quality increases emissions)
     emissions *= (1 + (air_quality / 100))
     return emissions
 
-# Function to calculate the optimal route and emissions
 def calculate_optimal_route(vehicle_type, start_lat, start_lon, end_lat, end_lon, city):
-    # Get traffic data
     traffic_time = get_traffic_data(start_lat, start_lon, end_lat, end_lon)
     
-    # Get route data
     route_duration, route_distance = get_route_data(start_lat, start_lon, end_lat, end_lon)
     
-    # Get air quality data
     air_quality = get_air_quality_data(city)
     
-    # Estimate emissions
     emissions = estimate_emissions(vehicle_type, route_distance / 1000, air_quality)  # convert distance to km
     
     return route_duration, route_distance, emissions, traffic_time
 
-# UI for the application
 class RouteOptimizationApp:
     def _init_(self, root):
         self.root = root
         self.root.title("Dynamic Route Optimization and Emission Reduction")
         
-        # Create UI components
         self.create_widgets()
     
     def create_widgets(self):
@@ -113,16 +99,13 @@ class RouteOptimizationApp:
         end_lon = float(self.end_lon_entry.get())
         city = self.city_entry.get()
         
-        # Calculate optimal route and emissions
         route_duration, route_distance, emissions, traffic_time = calculate_optimal_route(vehicle_type, start_lat, start_lon, end_lat, end_lon, city)
         
-        # Display results
         self.result_label.config(text=f"Route Duration: {route_duration / 60:.2f} minutes\n"
                                      f"Route Distance: {route_distance / 1000:.2f} km\n"
                                      f"Emissions: {emissions:.2f} grams CO2\n"
                                      f"Traffic Time: {traffic_time / 60:.2f} minutes")
 
-# Create the Tkinter window and start the application
 root = tk.Tk()
 app = RouteOptimizationApp(root)
 root.mainloop()
